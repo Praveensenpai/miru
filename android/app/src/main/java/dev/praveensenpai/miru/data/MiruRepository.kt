@@ -1,0 +1,33 @@
+package dev.praveensenpai.miru.data
+
+import dev.praveensenpai.miru.data.model.StreamsResponse
+import dev.praveensenpai.miru.data.model.VideoCard
+import dev.praveensenpai.miru.data.model.VideoDetail
+import dev.praveensenpai.miru.data.remote.MiruApi
+import dev.praveensenpai.miru.data.remote.NetworkModule
+
+/**
+ * Single access point to the backend.
+ *
+ * Deliberately thin for v1: it wraps the API and normalises failures into
+ * [Result] so ViewModels never touch Retrofit types. Local caching (Room) will
+ * be layered underneath this without changing call sites.
+ */
+class MiruRepository(private val api: MiruApi = NetworkModule.api) {
+
+    suspend fun trending(): Result<List<VideoCard>> = runCatching {
+        api.trending().items
+    }
+
+    suspend fun search(query: String, page: Int = 1): Result<List<VideoCard>> = runCatching {
+        api.search(query, page).items
+    }
+
+    suspend fun video(id: String): Result<VideoDetail> = runCatching {
+        api.video(id)
+    }
+
+    suspend fun streams(id: String): Result<StreamsResponse> = runCatching {
+        api.streams(id)
+    }
+}

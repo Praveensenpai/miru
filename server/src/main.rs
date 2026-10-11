@@ -2,6 +2,7 @@
 //!
 //! See docs/API.md for the contract this server implements.
 
+mod cache;
 mod extractor;
 mod models;
 

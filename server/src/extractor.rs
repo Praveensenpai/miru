@@ -6,6 +6,7 @@
 //! app update, no server rewrite.
 
 use std::process::Stdio;
+use std::time::Duration;
 
 use anyhow::{bail, Context, Result};
 use tokio::process::Command;
@@ -15,6 +16,13 @@ use crate::models::{
     VideoCard, VideoDetail,
 };
 
+/// How long an extraction result stays cached.
+///
+/// Stream URLs expire after a few hours, so this must stay comfortably below
+/// that. Ten minutes is long enough that navigating away and back is instant,
+/// and short enough that a video's metadata never goes meaningfully stale.
+const CACHE_TTL: Duration = Duration::from_secs(600);
+
 /// Extractor args passed to yt-dlp on every invocation.
 ///
 /// `android_vr` currently slips past several client-side gates that the web
@@ -22,7 +30,20 @@ use crate::models::{
 const PLAYER_CLIENTS: &str = "android_vr,web";
 
 /// Run `yt-dlp -J` (single JSON dump) against a target and return parsed JSON.
+///
+/// Results are cached for [`CACHE_TTL`]. Extraction is slow enough (tens of
+/// seconds for a cold search) that caching is the difference between a usable
+/// app and one that spins for a minute on every launch.
 async fn dump_json(target: &str, extra: &[&str]) -> Result<serde_json::Value> {
+    // The cache key must capture every input that changes the output.
+    let key = format!("{target}|{}", extra.join(","));
+    if let Some(hit) = crate::cache::get(&key) {
+        if let Ok(value) = serde_json::from_str(&hit) {
+            tracing::debug!(%target, "cache hit");
+            return Ok(value);
+        }
+    }
+
     let mut cmd = Command::new("yt-dlp");
     cmd.arg("-J")
         .arg("--no-warnings")
@@ -44,7 +65,16 @@ async fn dump_json(target: &str, extra: &[&str]) -> Result<serde_json::Value> {
         bail!("yt-dlp failed: {}", stderr.trim());
     }
 
-    serde_json::from_slice(&output.stdout).context("yt-dlp returned invalid JSON")
+    let value: serde_json::Value =
+        serde_json::from_slice(&output.stdout).context("yt-dlp returned invalid JSON")?;
+
+    // Only successful extractions are cached, so a transient failure does not
+    // get pinned for the whole TTL.
+    if let Ok(encoded) = serde_json::to_string(&value) {
+        crate::cache::put(&key, encoded, CACHE_TTL);
+    }
+
+    Ok(value)
 }
 
 /// Pick the best thumbnail URL from a yt-dlp JSON object.
