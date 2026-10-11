@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">miru</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_subscriptions">Subscriptions</string>
+    <string name="nav_library">Library</string>
+    <string name="nav_downloads">Downloads</string>
+    <string name="nav_you">You</string>
+    <string name="search_hint">Search miru</string>
+</resources>
