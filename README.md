@@ -17,15 +17,16 @@ server-side without shipping a new app build.
 
 | Feature | Status |
 |---|---|
-| Clean Compose Material 3 UI | in progress |
-| Ad-free playback | in progress |
-| Downloads | in progress |
+| Clean Compose Material 3 UI | done |
+| Ad-free playback | done |
+| Search | done |
+| Downloads | done (single-file; track muxing is v2) |
 | SponsorBlock | v2 |
 | Age-restricted (18+) content | v2 |
 | Background / PiP audio | v2 |
 | Subscriptions + history sync | v2 |
 
-Bottom navigation: Home · Subscriptions · Library · Downloads · You
+Bottom navigation: Home · Subs · Library · Downloads · You
 
 ## Architecture
 
