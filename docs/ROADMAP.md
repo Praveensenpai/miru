@@ -24,8 +24,11 @@ Ordered by value-to-effort. Each is independent and can ship on its own.
 1. **SponsorBlock** — fetch segments from `sponsor.ajay.app` and auto-skip.
    Done — server proxies + caches `/sponsorblock/{id}`; the player polls position
    and seeks past each segment once, with a toggle and a "Skipped sponsor" toast.
-2. **Background + PiP audio** — the `PlaybackService` is already wired; this is
-   mostly notification and lifecycle polish.
+2. **Background + PiP audio** — done. `PlaybackService` now owns the ExoPlayer
+   and a `MediaSession`; the UI attaches via `MediaController` and renders into a
+   `SurfaceView`, so audio keeps playing with a system media notification and the
+   video keeps showing in picture-in-picture when the screen is left. A custom
+   `DataSource` adds the server-proxy fallback for 403'd streams below the player.
 3. **Age-restricted (18+) playback** — burner cookie rotation on the server.
    Highest maintenance cost; deliberately deferred until the base is solid.
 4. **Subscriptions + history** — local Room first, optional server sync later.
