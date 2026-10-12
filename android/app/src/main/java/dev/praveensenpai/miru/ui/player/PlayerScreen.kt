@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -48,8 +49,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
@@ -57,6 +60,8 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import dev.praveensenpai.miru.data.download.DownloadEnqueuer
+import dev.praveensenpai.miru.data.model.SponsorSegment
+import dev.praveensenpai.miru.data.remote.NetworkModule
 import kotlinx.coroutines.delay
 
 /**
@@ -110,6 +115,7 @@ fun PlayerScreen(
                 VideoSurface(
                     playUrl = s.playUrl,
                     audioUrl = s.audioUrl,
+                    segments = s.segments,
                     onBack = onBack,
                     onDownload = {
                         DownloadEnqueuer.enqueue(
@@ -152,12 +158,15 @@ fun PlayerScreen(
 private fun VideoSurface(
     playUrl: String,
     audioUrl: String?,
+    segments: List<SponsorSegment>,
     onBack: () -> Unit,
     onDownload: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var isPlaying by remember { mutableStateOf(true) }
     var controlsVisible by remember { mutableStateOf(true) }
+    var sponsorBlockEnabled by remember { mutableStateOf(true) }
+    var skipNotice by remember { mutableStateOf(false) }
 
     val player = remember {
         ExoPlayer.Builder(context).build().apply {
@@ -165,9 +174,26 @@ private fun VideoSurface(
         }
     }
 
+    // googlevideo locks each URL to the IP of the host that extracted it, so a
+    // direct fetch from the device can 403. On that error we retry once through
+    // the server's /proxy, which fetches from the correct IP.
+    var useProxy by remember(playUrl) { mutableStateOf(false) }
+
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                val code = (error.cause as? HttpDataSource.InvalidResponseCodeException)
+                    ?.responseCode
+                if (code == 403 && !useProxy) useProxy = true
+            }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+
     // Build the media source. When the video track is video-only, merge the
     // separate audio track so playback has sound.
-    LaunchedEffect(playUrl, audioUrl) {
+    LaunchedEffect(playUrl, audioUrl, useProxy) {
         val dataSourceFactory = DefaultDataSource.Factory(
             context,
             DefaultHttpDataSource.Factory()
@@ -176,9 +202,11 @@ private fun VideoSurface(
         )
         val sourceFactory = ProgressiveMediaSource.Factory(dataSourceFactory)
 
-        val videoSource = sourceFactory.createMediaSource(MediaItem.fromUri(playUrl))
+        val videoUri = if (useProxy) NetworkModule.proxyUrl(playUrl) else playUrl
+        val videoSource = sourceFactory.createMediaSource(MediaItem.fromUri(videoUri))
         val source = if (audioUrl != null) {
-            val audioSource = sourceFactory.createMediaSource(MediaItem.fromUri(audioUrl))
+            val audioUri = if (useProxy) NetworkModule.proxyUrl(audioUrl) else audioUrl
+            val audioSource = sourceFactory.createMediaSource(MediaItem.fromUri(audioUri))
             MergingMediaSource(videoSource, audioSource)
         } else {
             videoSource
@@ -186,6 +214,38 @@ private fun VideoSurface(
 
         player.setMediaSource(source)
         player.prepare()
+    }
+
+    // SponsorBlock: poll playback position and seek past any segment we are
+    // inside. Each segment is skipped at most once, so a user who rewinds into
+    // a sponsor read is not yanked forward again.
+    val skipped = remember { mutableSetOf<Int>() }
+    LaunchedEffect(playUrl, segments, sponsorBlockEnabled) {
+        while (true) {
+            delay(500)
+            if (sponsorBlockEnabled && player.isPlaying) {
+                val pos = player.currentPosition / 1000.0
+                segments.forEachIndexed { index, seg ->
+                    val inside = pos >= seg.start && pos < seg.end
+                    if (inside && skipped.add(index)) {
+                        android.util.Log.i(
+                            "MiruPlayer",
+                            "SponsorBlock skip: ${seg.category} $pos -> ${seg.end}",
+                        )
+                        player.seekTo((seg.end * 1000).toLong())
+                        skipNotice = true
+                    }
+                }
+            }
+        }
+    }
+
+    // Fade the skip notice after a moment.
+    LaunchedEffect(skipNotice) {
+        if (skipNotice) {
+            delay(2500)
+            skipNotice = false
+        }
     }
 
     // Auto-hide controls after 3 seconds of being shown.
@@ -251,6 +311,25 @@ private fun VideoSurface(
                     )
                 }
 
+                if (segments.isNotEmpty()) {
+                    IconButton(
+                        onClick = { sponsorBlockEnabled = !sponsorBlockEnabled },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 8.dp, end = 56.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.ContentCut,
+                            contentDescription = if (sponsorBlockEnabled) {
+                                "SponsorBlock on"
+                            } else {
+                                "SponsorBlock off"
+                            },
+                            tint = if (sponsorBlockEnabled) Color.White else Color.Gray,
+                        )
+                    }
+                }
+
                 IconButton(
                     onClick = {
                         if (player.isPlaying) player.pause() else player.play()
@@ -266,6 +345,21 @@ private fun VideoSurface(
                     )
                 }
             }
+        }
+
+        AnimatedVisibility(
+            visible = skipNotice,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = 96.dp),
+        ) {
+            Text(
+                text = "Skipped sponsor",
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge,
+            )
         }
     }
 }

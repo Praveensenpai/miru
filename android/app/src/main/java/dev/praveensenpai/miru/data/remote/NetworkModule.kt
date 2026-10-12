@@ -19,6 +19,16 @@ object NetworkModule {
 
     const val BASE_URL = "http://10.0.2.2:8787/"
 
+    /**
+     * Wrap a googlevideo URL so the server fetches it on the client's behalf.
+     *
+     * googlevideo locks each URL to the IP that extracted it (the server). A
+     * direct fetch from any other device returns 403, so playback falls back to
+     * this when the direct URL is rejected.
+     */
+    fun proxyUrl(streamUrl: String): String =
+        BASE_URL + "proxy?url=" + java.net.URLEncoder.encode(streamUrl, "UTF-8")
+
     private val json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false

@@ -5,6 +5,7 @@
 mod cache;
 mod extractor;
 mod models;
+mod sponsorblock;
 
 use std::time::Duration;
 
@@ -100,6 +101,14 @@ async fn channel(axum::extract::Path(id): axum::extract::Path<String>) -> Respon
     }
 }
 
+/// SponsorBlock segments for a video, filtered to just that video.
+async fn sponsorblock(axum::extract::Path(id): axum::extract::Path<String>) -> Response {
+    match sponsorblock::segments(&id).await {
+        Ok(resp) => Json(resp).into_response(),
+        Err(err) => backend_error(err),
+    }
+}
+
 /// Stream bytes from an upstream googlevideo URL back to the client.
 ///
 /// Used only as a fallback when a direct URL is IP-locked or returns 403.
@@ -140,7 +149,7 @@ async fn proxy(
 
     let stream = upstream
         .bytes_stream()
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e));
+        .map_err(std::io::Error::other);
 
     builder
         .body(Body::from_stream(stream))
@@ -161,6 +170,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/video/{id}", get(video))
         .route("/streams/{id}", get(streams))
         .route("/channel/{id}", get(channel))
+        .route("/sponsorblock/{id}", get(sponsorblock))
         .route("/proxy", get(proxy))
         .with_state(AppState);
 

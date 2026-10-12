@@ -103,3 +103,21 @@ pub struct HealthResponse {
     pub version: String,
     pub authenticated: bool,
 }
+
+/// A single SponsorBlock segment to skip.
+///
+/// `category` is one of SponsorBlock's lower-case names (`sponsor`,
+/// `selfpromo`, `interaction`, `intro`, `outro`, `music_offtopic`, `preview`,
+/// `filler`). The client decides which categories it honours.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SponsorSegment {
+    pub category: String,
+    pub start: f64,
+    pub end: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SponsorBlockResponse {
+    pub id: String,
+    pub segments: Vec<SponsorSegment>,
+}

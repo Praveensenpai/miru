@@ -90,6 +90,19 @@ data class ChannelResponse(
 )
 
 @Serializable
+data class SponsorSegment(
+    val category: String,
+    val start: Double,
+    val end: Double,
+)
+
+@Serializable
+data class SponsorBlockResponse(
+    val id: String,
+    val segments: List<SponsorSegment> = emptyList(),
+)
+
+@Serializable
 data class HealthResponse(
     val status: String,
     val version: String,

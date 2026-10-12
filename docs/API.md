@@ -100,6 +100,25 @@ Returns playable media. `kind` is `"direct"` (URL is googlevideo, may be IP-lock
 Streams bytes with `Content-Range` passthrough. Used when a direct URL fails
 (IP lock, 403). Not used by default.
 
+## SponsorBlock
+
+`GET /sponsorblock/{id}`
+
+Crowd-sourced segments to auto-skip, proxied and cached server-side (1 hour).
+`category` is one of `sponsor`, `selfpromo`, `interaction`, `intro`, `outro`,
+`music_offtopic`, `preview`, `filler`. Only `skip`-action segments are returned;
+`mute` segments are dropped. A video with no segments returns an empty list, not
+an error.
+
+```json
+{
+  "id": "dQw4w9WgXcQ",
+  "segments": [
+    { "category": "sponsor", "start": 12.5, "end": 48.0 }
+  ]
+}
+```
+
 ## Shared types
 
 `VideoCard`

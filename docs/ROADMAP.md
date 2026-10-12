@@ -22,7 +22,8 @@ plays YouTube ad-free and can download for offline.
 Ordered by value-to-effort. Each is independent and can ship on its own.
 
 1. **SponsorBlock** — fetch segments from `sponsor.ajay.app` and auto-skip.
-   Lowest effort, highest visible payoff.
+   Done — server proxies + caches `/sponsorblock/{id}`; the player polls position
+   and seeks past each segment once, with a toggle and a "Skipped sponsor" toast.
 2. **Background + PiP audio** — the `PlaybackService` is already wired; this is
    mostly notification and lifecycle polish.
 3. **Age-restricted (18+) playback** — burner cookie rotation on the server.

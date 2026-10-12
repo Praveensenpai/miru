@@ -3,6 +3,7 @@ package dev.praveensenpai.miru.data.remote
 import dev.praveensenpai.miru.data.model.ChannelResponse
 import dev.praveensenpai.miru.data.model.HealthResponse
 import dev.praveensenpai.miru.data.model.SearchResponse
+import dev.praveensenpai.miru.data.model.SponsorBlockResponse
 import dev.praveensenpai.miru.data.model.StreamsResponse
 import dev.praveensenpai.miru.data.model.TrendingResponse
 import dev.praveensenpai.miru.data.model.VideoDetail
@@ -33,4 +34,7 @@ interface MiruApi {
 
     @GET("channel/{id}")
     suspend fun channel(@Path("id") id: String): ChannelResponse
+
+    @GET("sponsorblock/{id}")
+    suspend fun sponsorblock(@Path("id") id: String): SponsorBlockResponse
 }

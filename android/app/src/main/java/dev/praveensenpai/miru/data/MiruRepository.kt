@@ -1,5 +1,6 @@
 package dev.praveensenpai.miru.data
 
+import dev.praveensenpai.miru.data.model.SponsorSegment
 import dev.praveensenpai.miru.data.model.StreamsResponse
 import dev.praveensenpai.miru.data.model.VideoCard
 import dev.praveensenpai.miru.data.model.VideoDetail
@@ -29,5 +30,14 @@ class MiruRepository(private val api: MiruApi = NetworkModule.api) {
 
     suspend fun streams(id: String): Result<StreamsResponse> = runCatching {
         api.streams(id)
+    }
+
+    /**
+     * SponsorBlock segments for a video.
+     *
+     * Failure is non-fatal: the player simply skips nothing.
+     */
+    suspend fun sponsorblock(id: String): Result<List<SponsorSegment>> = runCatching {
+        api.sponsorblock(id).segments
     }
 }

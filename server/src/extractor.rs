@@ -25,9 +25,13 @@ const CACHE_TTL: Duration = Duration::from_secs(600);
 
 /// Extractor args passed to yt-dlp on every invocation.
 ///
-/// `android_vr` currently slips past several client-side gates that the web
-/// client enforces; `web` is kept as a fallback client.
-const PLAYER_CLIENTS: &str = "android_vr,web";
+/// `android` is currently the only client that returns URLs which stream
+/// end-to-end. The higher-resolution clients (`android_vr`, `tv_embedded`, …)
+/// hand back 1080p URLs that YouTube throttles to the first ~30 MB and then
+/// answers with 403 — and which reject non-zero byte offsets, so seeking fails
+/// too. Unlocking those needs a PO token (see docs/ROADMAP.md); until then this
+/// trades resolution for playback that actually works.
+const PLAYER_CLIENTS: &str = "android";
 
 /// Run `yt-dlp -J` (single JSON dump) against a target and return parsed JSON.
 ///
@@ -287,7 +291,7 @@ pub async fn streams(id: &str) -> Result<StreamsResponse> {
     }
 
     // Highest resolution first for video; highest bitrate first for audio.
-    video.sort_by(|a, b| b.height.cmp(&a.height));
+    video.sort_by_key(|a| std::cmp::Reverse(a.height));
     audio.sort_by(|a, b| {
         b.bitrate
             .partial_cmp(&a.bitrate)
