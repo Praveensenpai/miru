@@ -1,5 +1,6 @@
 package dev.praveensenpai.miru.data
 
+import dev.praveensenpai.miru.data.model.ChannelResponse
 import dev.praveensenpai.miru.data.model.DislikeResponse
 import dev.praveensenpai.miru.data.model.SponsorSegment
 import dev.praveensenpai.miru.data.model.StreamsResponse
@@ -31,6 +32,11 @@ class MiruRepository(private val api: MiruApi = NetworkModule.api) {
 
     suspend fun streams(id: String): Result<StreamsResponse> = runCatching {
         api.streams(id)
+    }
+
+    /** A channel's profile and recent videos. */
+    suspend fun channel(id: String): Result<ChannelResponse> = runCatching {
+        api.channel(id)
     }
 
     /**

@@ -25,4 +25,7 @@ enum class TopDestination(
 object Routes {
     const val PLAYER = "player/{videoId}"
     fun player(videoId: String) = "player/$videoId"
+
+    const val CHANNEL = "channel/{channelId}"
+    fun channel(channelId: String) = "channel/$channelId"
 }

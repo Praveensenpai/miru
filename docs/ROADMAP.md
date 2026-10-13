@@ -31,7 +31,12 @@ Ordered by value-to-effort. Each is independent and can ship on its own.
    `DataSource` adds the server-proxy fallback for 403'd streams below the player.
 3. **Age-restricted (18+) playback** — burner cookie rotation on the server.
    Highest maintenance cost; deliberately deferred until the base is solid.
-4. **Subscriptions + history** — local Room first, optional server sync later.
+4. **Subscriptions + history** — done. Local Room only (no account). The player
+   records every watch and offers a subscribe toggle on the channel row; the
+   Subscriptions tab lists subscribed channels (tap to browse the channel's
+   recent videos via `/channel/{id}`), and the Library tab shows watch history
+   newest-first with a clear action. `MiruDatabase` moved to v2 with a real
+   `1 -> 2` migration so existing downloads survive the upgrade.
 5. **Return YouTube Dislike** — done. Server proxies and caches
    `/dislike/{id}`; the player shows estimated likes and dislikes under the
    title when the data is available.

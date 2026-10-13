@@ -7,10 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -27,12 +24,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dev.praveensenpai.miru.ui.components.PlaceholderScreen
+import dev.praveensenpai.miru.ui.channel.ChannelScreen
 import dev.praveensenpai.miru.ui.downloads.DownloadsScreen
 import dev.praveensenpai.miru.ui.home.HomeScreen
+import dev.praveensenpai.miru.ui.library.LibraryScreen
 import dev.praveensenpai.miru.ui.nav.Routes
 import dev.praveensenpai.miru.ui.nav.TopDestination
 import dev.praveensenpai.miru.ui.player.PlayerScreen
 import dev.praveensenpai.miru.ui.search.SearchScreen
+import dev.praveensenpai.miru.ui.subscriptions.SubscriptionsScreen
 import dev.praveensenpai.miru.ui.theme.MiruTheme
 
 /**
@@ -113,18 +113,14 @@ private fun MiruRoot() {
             }
 
             composable(TopDestination.Subscriptions.route) {
-                PlaceholderScreen(
-                    icon = Icons.Filled.Subscriptions,
-                    title = "Subscriptions",
-                    message = "Channel subscriptions and sync arrive in v2.",
+                SubscriptionsScreen(
+                    onChannelClick = { id -> navController.navigate(Routes.channel(id)) },
                 )
             }
 
             composable(TopDestination.Library.route) {
-                PlaceholderScreen(
-                    icon = Icons.Filled.LibraryMusic,
-                    title = "Library",
-                    message = "Playlists, watch later, and history arrive in v2.",
+                LibraryScreen(
+                    onVideoClick = { id -> navController.navigate(Routes.player(id)) },
                 )
             }
 
@@ -151,6 +147,15 @@ private fun MiruRoot() {
                 val videoId = entry.arguments?.getString("videoId").orEmpty()
                 PlayerScreen(
                     videoId = videoId,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(Routes.CHANNEL) { entry ->
+                val channelId = entry.arguments?.getString("channelId").orEmpty()
+                ChannelScreen(
+                    channelId = channelId,
+                    onVideoClick = { id -> navController.navigate(Routes.player(id)) },
                     onBack = { navController.popBackStack() },
                 )
             }

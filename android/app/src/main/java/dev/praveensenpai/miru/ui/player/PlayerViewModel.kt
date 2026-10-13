@@ -3,6 +3,7 @@ package dev.praveensenpai.miru.ui.player
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.praveensenpai.miru.data.MiruRepository
+import dev.praveensenpai.miru.data.library.LibraryRepository
 import dev.praveensenpai.miru.data.model.DislikeResponse
 import dev.praveensenpai.miru.data.model.SponsorSegment
 import dev.praveensenpai.miru.data.model.StreamsResponse
@@ -31,10 +32,17 @@ sealed interface PlayerUiState {
 class PlayerViewModel(
     private val videoId: String,
     private val repository: MiruRepository = MiruRepository(),
+    private val library: LibraryRepository? = null,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<PlayerUiState>(PlayerUiState.Loading)
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
+
+    /** Whether the current video's channel is subscribed to. */
+    private val _subscribed = MutableStateFlow(false)
+    val subscribed: StateFlow<Boolean> = _subscribed.asStateFlow()
+
+    private var channelId: String? = null
 
     init {
         load()
@@ -54,6 +62,11 @@ class PlayerViewModel(
                 _state.value = PlayerUiState.Error(it.message ?: "Failed to load video")
                 return@launch
             }
+
+            // Record the watch as soon as the video is resolved. History is
+            // local and cheap, so this never blocks playback.
+            library?.recordWatch(detail)
+            refreshSubscription(detail.channel.id)
             val streams = streamsResult.getOrElse {
                 _state.value = PlayerUiState.Error(it.message ?: "Failed to load streams")
                 return@launch
@@ -81,6 +94,30 @@ class PlayerViewModel(
                 segments = segments.sortedBy { it.start },
                 votes = votes,
             )
+        }
+    }
+
+    /** Mirror the channel's subscription state into [subscribed]. */
+    private fun refreshSubscription(id: String?) {
+        channelId = id
+        val lib = library ?: return
+        if (id.isNullOrBlank()) return
+        viewModelScope.launch {
+            lib.observeSubscribed(id).collect { _subscribed.value = it }
+        }
+    }
+
+    /** Subscribe or unsubscribe from the current video's channel. */
+    fun toggleSubscription() {
+        val lib = library ?: return
+        val id = channelId ?: return
+        val detail = (_state.value as? PlayerUiState.Ready)?.detail ?: return
+        viewModelScope.launch {
+            if (_subscribed.value) {
+                lib.unsubscribe(id)
+            } else {
+                lib.subscribe(id, detail.channel.name.orEmpty(), detail.channel.avatar)
+            }
         }
     }
 }

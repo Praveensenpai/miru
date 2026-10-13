@@ -32,6 +32,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -77,14 +78,15 @@ import kotlinx.coroutines.delay
 fun PlayerScreen(
     videoId: String,
     onBack: () -> Unit,
-    viewModel: PlayerViewModel = viewModel(
-        key = videoId,
-        factory = PlayerViewModelFactory(videoId),
-    ),
 ) {
-    val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val viewModel: PlayerViewModel = viewModel(
+        key = videoId,
+        factory = PlayerViewModelFactory(videoId, context.applicationContext),
+    )
+    val state by viewModel.state.collectAsState()
     val controller = rememberMediaController(context)
+    val subscribed by viewModel.subscribed.collectAsState()
 
     // Hand the resolved streams to the service once, when both the controller
     // is connected and the video is ready.
@@ -178,6 +180,14 @@ fun PlayerScreen(
                                 color = Color.LightGray,
                                 modifier = Modifier.padding(top = 4.dp),
                             )
+                        }
+                        if (!s.detail.channel.id.isNullOrBlank()) {
+                            OutlinedButton(
+                                onClick = viewModel::toggleSubscription,
+                                modifier = Modifier.padding(top = 8.dp),
+                            ) {
+                                Text(if (subscribed) "Subscribed" else "Subscribe")
+                            }
                         }
                     }
                 }
