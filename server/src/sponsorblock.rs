@@ -115,9 +115,9 @@ pub async fn segments(video_id: &str) -> Result<SponsorBlockResponse> {
     let segments = parsed
         .as_array()
         .and_then(|entries| {
-            entries.iter().find(|e| {
-                e.get("videoID").and_then(|v| v.as_str()) == Some(video_id)
-            })
+            entries
+                .iter()
+                .find(|e| e.get("videoID").and_then(|v| v.as_str()) == Some(video_id))
         })
         .map(segments_of)
         .unwrap_or_default();

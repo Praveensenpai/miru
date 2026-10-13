@@ -21,10 +21,11 @@ server-side without shipping a new app build.
 | Ad-free playback | done |
 | Search | done |
 | Downloads | done (single-file; track muxing is v2) |
-| SponsorBlock | v2 |
-| Age-restricted (18+) content | v2 |
-| Background / PiP audio | v2 |
-| Subscriptions + history sync | v2 |
+| SponsorBlock | done |
+| Return YouTube Dislike | done |
+| Background / PiP audio | done |
+| Subscriptions + history | done (local; sync is later) |
+| Age-restricted (18+) content | v2 (deferred) |
 
 Bottom navigation: Home · Subs · Library · Downloads · You
 

@@ -11,6 +11,7 @@ plays YouTube ad-free and can download for offline.
 |---|---|---|
 | M0 | API contract (`docs/API.md`) | done |
 | M1 | Rust extraction backend | done — `v0.0.1` |
+| M7 | Release pipeline (CI + tags) | done — `v0.2.0` |
 | M2 | Compose shell: 5-tab nav + Home feed | done |
 | M3 | Player (Media3, gesture controls) | done — verified on emulator |
 | M4 | Search | done |

@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  server:
+    name: Server (x86_64-unknown-linux-gnu)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: x86_64-unknown-linux-gnu
+          workspaces: server
+
+      - name: Build release binary
+        working-directory: server
+        run: cargo build --release --target x86_64-unknown-linux-gnu
+
+      - name: Package archive and checksums
+        working-directory: server
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp target/x86_64-unknown-linux-gnu/release/miru-server dist/miru-server
+          cd dist
+          tar -czf miru-server-x86_64-linux.tar.gz miru-server
+          sha256sum miru-server-x86_64-linux.tar.gz > miru-server-x86_64-linux.tar.gz.sha256
+
+      - name: Upload server artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: server/dist/*
+
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk miru-${{ github.ref_name }}-debug.apk
+
+      - name: Upload APK to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: miru-${{ github.ref_name }}-debug.apk

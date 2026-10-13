@@ -40,7 +40,11 @@ fn error_response(status: StatusCode, code: &str, message: impl Into<String>) ->
 /// Map any backend failure to a 502 with the underlying message.
 fn backend_error(err: anyhow::Error) -> Response {
     tracing::warn!(%err, "extraction failed");
-    error_response(StatusCode::BAD_GATEWAY, "extraction_failed", err.to_string())
+    error_response(
+        StatusCode::BAD_GATEWAY,
+        "extraction_failed",
+        err.to_string(),
+    )
 }
 
 #[derive(Deserialize)]
@@ -140,29 +144,33 @@ async fn proxy(
     let upstream = match req.send().await {
         Ok(r) => r,
         Err(err) => {
-            return error_response(
-                StatusCode::BAD_GATEWAY,
-                "proxy_failed",
-                err.to_string(),
-            )
+            return error_response(StatusCode::BAD_GATEWAY, "proxy_failed", err.to_string())
         }
     };
 
     let status = upstream.status();
     let mut builder = Response::builder().status(status);
-    for name in [header::CONTENT_TYPE, header::CONTENT_LENGTH, header::CONTENT_RANGE] {
+    for name in [
+        header::CONTENT_TYPE,
+        header::CONTENT_LENGTH,
+        header::CONTENT_RANGE,
+    ] {
         if let Some(value) = upstream.headers().get(&name) {
             builder = builder.header(name, value);
         }
     }
 
-    let stream = upstream
-        .bytes_stream()
-        .map_err(std::io::Error::other);
+    let stream = upstream.bytes_stream().map_err(std::io::Error::other);
 
     builder
         .body(Body::from_stream(stream))
-        .unwrap_or_else(|err| error_response(StatusCode::INTERNAL_SERVER_ERROR, "proxy_error", err.to_string()))
+        .unwrap_or_else(|err| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "proxy_error",
+                err.to_string(),
+            )
+        })
 }
 
 #[tokio::main]

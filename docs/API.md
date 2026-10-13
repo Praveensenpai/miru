@@ -13,7 +13,7 @@ All responses are JSON. All errors use:
 `GET /health`
 
 ```json
-{ "status": "ok", "version": "0.0.1", "authenticated": false }
+{ "status": "ok", "version": "0.2.0", "authenticated": false }
 ```
 
 ## Search
