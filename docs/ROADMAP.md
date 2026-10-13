@@ -32,7 +32,9 @@ Ordered by value-to-effort. Each is independent and can ship on its own.
 3. **Age-restricted (18+) playback** — burner cookie rotation on the server.
    Highest maintenance cost; deliberately deferred until the base is solid.
 4. **Subscriptions + history** — local Room first, optional server sync later.
-5. **Return YouTube Dislike** — a single extra API call.
+5. **Return YouTube Dislike** — done. Server proxies and caches
+   `/dislike/{id}`; the player shows estimated likes and dislikes under the
+   title when the data is available.
 
 ## Deliberately not planned
 

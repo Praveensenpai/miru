@@ -3,6 +3,7 @@ package dev.praveensenpai.miru.ui.player
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.praveensenpai.miru.data.MiruRepository
+import dev.praveensenpai.miru.data.model.DislikeResponse
 import dev.praveensenpai.miru.data.model.SponsorSegment
 import dev.praveensenpai.miru.data.model.StreamsResponse
 import dev.praveensenpai.miru.data.model.VideoDetail
@@ -21,6 +22,8 @@ sealed interface PlayerUiState {
         val audioUrl: String?,
         /** SponsorBlock segments to auto-skip, in ascending start order. */
         val segments: List<SponsorSegment>,
+        /** Estimated likes/dislikes, or null if unavailable. */
+        val votes: DislikeResponse? = null,
     ) : PlayerUiState
     data class Error(val message: String) : PlayerUiState
 }
@@ -44,6 +47,8 @@ class PlayerViewModel(
             val streamsResult = repository.streams(videoId)
             // Non-fatal: a SponsorBlock failure just means nothing is skipped.
             val segments = repository.sponsorblock(videoId).getOrDefault(emptyList())
+            // Non-fatal: the dislike row is simply hidden when unavailable.
+            val votes = repository.dislike(videoId).getOrNull()
 
             val detail = detailResult.getOrElse {
                 _state.value = PlayerUiState.Error(it.message ?: "Failed to load video")
@@ -74,6 +79,7 @@ class PlayerViewModel(
                 // Separate audio is needed whenever the video track has none.
                 audioUrl = if (videoOnly != null) bestAudio?.url else null,
                 segments = segments.sortedBy { it.start },
+                votes = votes,
             )
         }
     }

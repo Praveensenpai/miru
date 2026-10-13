@@ -3,6 +3,7 @@
 //! See docs/API.md for the contract this server implements.
 
 mod cache;
+mod dislike;
 mod extractor;
 mod models;
 mod sponsorblock;
@@ -109,6 +110,14 @@ async fn sponsorblock(axum::extract::Path(id): axum::extract::Path<String>) -> R
     }
 }
 
+/// Estimated like/dislike counts for a video.
+async fn dislike(axum::extract::Path(id): axum::extract::Path<String>) -> Response {
+    match dislike::votes(&id).await {
+        Ok(resp) => Json(resp).into_response(),
+        Err(err) => backend_error(err),
+    }
+}
+
 /// Stream bytes from an upstream googlevideo URL back to the client.
 ///
 /// Used only as a fallback when a direct URL is IP-locked or returns 403.
@@ -171,6 +180,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/streams/{id}", get(streams))
         .route("/channel/{id}", get(channel))
         .route("/sponsorblock/{id}", get(sponsorblock))
+        .route("/dislike/{id}", get(dislike))
         .route("/proxy", get(proxy))
         .with_state(AppState);
 

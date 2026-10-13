@@ -1,6 +1,7 @@
 package dev.praveensenpai.miru.data.remote
 
 import dev.praveensenpai.miru.data.model.ChannelResponse
+import dev.praveensenpai.miru.data.model.DislikeResponse
 import dev.praveensenpai.miru.data.model.HealthResponse
 import dev.praveensenpai.miru.data.model.SearchResponse
 import dev.praveensenpai.miru.data.model.SponsorBlockResponse
@@ -37,4 +38,7 @@ interface MiruApi {
 
     @GET("sponsorblock/{id}")
     suspend fun sponsorblock(@Path("id") id: String): SponsorBlockResponse
+
+    @GET("dislike/{id}")
+    suspend fun dislike(@Path("id") id: String): DislikeResponse
 }

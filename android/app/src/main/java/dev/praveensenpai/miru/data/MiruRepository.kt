@@ -1,5 +1,6 @@
 package dev.praveensenpai.miru.data
 
+import dev.praveensenpai.miru.data.model.DislikeResponse
 import dev.praveensenpai.miru.data.model.SponsorSegment
 import dev.praveensenpai.miru.data.model.StreamsResponse
 import dev.praveensenpai.miru.data.model.VideoCard
@@ -39,5 +40,14 @@ class MiruRepository(private val api: MiruApi = NetworkModule.api) {
      */
     suspend fun sponsorblock(id: String): Result<List<SponsorSegment>> = runCatching {
         api.sponsorblock(id).segments
+    }
+
+    /**
+     * Estimated like/dislike counts.
+     *
+     * Failure is non-fatal: the player just hides the dislike row.
+     */
+    suspend fun dislike(id: String): Result<DislikeResponse> = runCatching {
+        api.dislike(id)
     }
 }

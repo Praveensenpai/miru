@@ -171,6 +171,14 @@ fun PlayerScreen(
                                 modifier = Modifier.padding(top = 4.dp),
                             )
                         }
+                        s.votes?.let { votes ->
+                            Text(
+                                text = "👍 ${formatCount(votes.likes)}   👎 ${formatCount(votes.dislikes)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.LightGray,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -388,6 +396,14 @@ private fun VideoSurface(
             )
         }
     }
+}
+
+/** 1234567 -> "1.2M". Compact vote counts for the metadata row. */
+private fun formatCount(value: Long): String = when {
+    value >= 1_000_000_000 -> "%.1fB".format(value / 1_000_000_000.0)
+    value >= 1_000_000 -> "%.1fM".format(value / 1_000_000.0)
+    value >= 1_000 -> "%.1fK".format(value / 1_000.0)
+    else -> value.toString()
 }
 
 /** Enter picture-in-picture with a 16:9 window, on devices that support it. */

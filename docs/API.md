@@ -119,6 +119,23 @@ an error.
 }
 ```
 
+## Return YouTube Dislike
+
+`GET /dislike/{id}`
+
+Crowd-sourced like/dislike estimates from the Return YouTube Dislike project,
+proxied and cached server-side (1 hour). A video the upstream has never seen
+returns zeroed counts, not an error.
+
+```json
+{
+  "id": "dQw4w9WgXcQ",
+  "likes": 41234,
+  "dislikes": 812,
+  "rating": 4.8
+}
+```
+
 ## Shared types
 
 `VideoCard`

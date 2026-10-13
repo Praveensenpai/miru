@@ -121,3 +121,15 @@ pub struct SponsorBlockResponse {
     pub id: String,
     pub segments: Vec<SponsorSegment>,
 }
+
+/// Estimated like/dislike counts from the Return YouTube Dislike project.
+///
+/// `rating` is the 0..5 star-equivalent derived from the ratio of likes to
+/// total votes; it is 0.0 when there are no votes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DislikeResponse {
+    pub id: String,
+    pub likes: i64,
+    pub dislikes: i64,
+    pub rating: f64,
+}

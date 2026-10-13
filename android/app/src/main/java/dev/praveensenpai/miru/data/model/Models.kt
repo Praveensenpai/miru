@@ -79,6 +79,15 @@ data class TrendingResponse(
     val items: List<VideoCard> = emptyList(),
 )
 
+/** Estimated like/dislike counts from the Return YouTube Dislike project. */
+@Serializable
+data class DislikeResponse(
+    val id: String,
+    val likes: Long = 0,
+    val dislikes: Long = 0,
+    val rating: Double = 0.0,
+)
+
 @Serializable
 data class ChannelResponse(
     val id: String,
