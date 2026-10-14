@@ -54,6 +54,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.util.Consumer
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -144,6 +145,7 @@ fun PlayerScreen(
                         controller = controller,
                         segments = s.segments,
                         onBack = onBack,
+                        onRetry = viewModel::load,
                         onDownload = {
                             DownloadEnqueuer.enqueue(
                                 context = context,
@@ -225,6 +227,7 @@ private fun VideoSurface(
     controller: MediaController,
     segments: List<SponsorSegment>,
     onBack: () -> Unit,
+    onRetry: () -> Unit,
     onDownload: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -234,11 +237,27 @@ private fun VideoSurface(
     var skipNotice by remember { mutableStateOf(false) }
     var isInPip by remember { mutableStateOf(false) }
 
-    // Mirror playback state and drive picture-in-picture from the surface.
+    /** Fatal stream error name, or null while playback is healthy. */
+    var playbackError by remember { mutableStateOf<String?>(null) }
+
+    // Mirror playback state, surface fatal stream errors, and drive
+    // picture-in-picture from the surface.
     DisposableEffect(controller) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                // Without this the screen would sit on a silent black frame with
+                // no explanation whenever the stream fails to load (a refused
+                // CDN request, an expired URL that cannot be re-minted, etc.).
+                playbackError = error.errorCodeName
+                isPlaying = false
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) playbackError = null
             }
         }
         controller.addListener(listener)
@@ -405,6 +424,49 @@ private fun VideoSurface(
                 color = Color.White,
                 style = MaterialTheme.typography.labelLarge,
             )
+        }
+
+        // Fatal stream failure: replace the silent black frame with an
+        // explanation and a way out. Without this the player looked simply
+        // broken whenever the CDN refused the bytes.
+        AnimatedVisibility(
+            visible = playbackError != null && !isInPip,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.85f)),
+            ) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = "Couldn't play this video",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = playbackError ?: "",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            playbackError = null
+                            onRetry()
+                        },
+                        modifier = Modifier.padding(top = 8.dp),
+                    ) {
+                        Text("Retry")
+                    }
+                }
+            }
         }
     }
 }

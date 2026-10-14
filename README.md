@@ -78,6 +78,11 @@ retry of the *same* load cannot spin against a throttled endpoint. That keeps a
 rate-limited server from being hammered (and the throttle from worsening) while
 normal long-form playback still refreshes as needed.
 
+If a stream still fails to load, the player says so: a "Couldn't play this
+video" overlay shows the error and offers a Retry that re-extracts fresh URLs.
+A refused CDN request therefore reads as a transient problem the user can
+retry, rather than an app that has silently hung on a black frame.
+
 ## Building
 
 Requires the Android SDK (compileSdk 35) and JDK 17.

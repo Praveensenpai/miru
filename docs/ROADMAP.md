@@ -35,6 +35,9 @@ deploy, no IP to get blocked, no account.
 - **Bounded refresh budget** (`v0.3.2`+) — a re-open of the *same* load keeps its
   remaining re-mint budget instead of resetting it, so a throttled endpoint is
   not hammered by the player's retry loop.
+- **Visible playback errors** (`v0.3.4`) — a fatal stream failure shows a
+  "Couldn't play this video" overlay with the error code and a Retry that
+  re-extracts fresh URLs, instead of a silent black frame.
 
 ## v2 — the differentiators
 
