@@ -23,8 +23,10 @@ plays YouTube ad-free and can download for offline.
 Replaced the Rust backend with on-device InnerTube extraction. No server to
 deploy, no IP to get blocked, no account.
 
-- **Dual InnerTube profiles** — `ANDROID_VR` for catalog, `IOS` for the player
-  (plain un-ciphered URLs up to 2160p, no JS runtime needed).
+- **Single InnerTube profile** (`v0.3.5`) — `ANDROID_VR 1.65.10` for both catalog
+  and player, with a one-time `visitorData` that clears the bot gate. Replaced
+  the `IOS` player client, whose URLs now need a PO token and returned HTTP 403 on
+  every range.
 - **Bounded-range streaming** — a custom `DataSource` requests bounded windows and
   stitches them into one stream. googlevideo rejects oversized/open-ended ranges
   and its `rqh=1` URLs stop serving a rendition after a while, so a refused read

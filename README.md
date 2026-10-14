@@ -60,10 +60,13 @@ Android app (Compose M3, Media3, Room, WorkManager, Coil)
         |-- googlevideo CDN                --> media bytes (bounded ranges)
 ```
 
-The extractor uses two InnerTube client profiles: an **ANDROID_VR** client for
-catalog (search, browse, channel) and an **iOS** client for the player, which
-returns plain, un-ciphered stream URLs up to 2160p and avoids needing a
-JavaScript runtime for signature deciphering.
+The extractor uses a single InnerTube client profile: **ANDROID_VR 1.65.10**.
+An **iOS** client was used previously, but as of 2026 its googlevideo URLs
+require a PO token the app cannot mint, so every range was refused with HTTP
+403. The ANDROID_VR client returns plain, un-ciphered stream URLs (no JavaScript
+signature deciphering) and, paired with a `visitorData` value, clears YouTube's
+bot gate. A `visitorData` is minted once from `/visitor_id` and sent as
+`X-Goog-Visitor-Id` on every request.
 
 Media is streamed through a custom `DataSource` that requests bounded byte
 ranges and stitches them into one continuous stream. googlevideo rejects

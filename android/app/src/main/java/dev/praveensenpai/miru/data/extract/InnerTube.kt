@@ -1,6 +1,8 @@
 package dev.praveensenpai.miru.data.extract
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -29,22 +31,27 @@ import java.util.concurrent.TimeUnit
  * Miru has no server: extraction happens on the device by calling the same
  * `youtubei/v1` endpoints the official apps use.
  *
- * Two client profiles are used because YouTube gates them differently:
+ * A single client profile is used for every call: **ANDROID_VR 1.65.10**.
  *
- *  - **Catalog** (`search`, `browse`) uses `ANDROID_VR`, which still returns the
- *    classic `compactVideoRenderer` feeds the UI is built around.
- *  - **Player** (`player`) uses `IOS`. As of late 2025 every `ANDROID_VR` version
- *    is bot-gated (`LOGIN_REQUIRED`, "Sign in to confirm you're not a bot") for
- *    ordinary feed videos, while `IOS` 20.44–21.20 still returns plain,
- *    un-ciphered `url` fields up to 2160p. Because the URLs are not
- *    `signatureCipher`, no JavaScript signature deciphering (n-sig/PO token) is
- *    required, and they honour HTTP Range requests (206) instead of being
- *    throttled. IOS exposes only adaptive (separate video/audio) formats, which
- *    the player already merges.
+ * YouTube's clients are gated differently:
  *
- * Requests run without an API key: the keyed ANDROID/IOS clients reject anonymous
- * callers with `FAILED_PRECONDITION` when the client version is stale, so the
- * versions below must be kept current.
+ *  - `IOS` returns plain, un-ciphered `url` fields, but as of 2026 its
+ *    googlevideo URLs carry `GVS_PO_TOKEN_POLICY: required` — without a PO
+ *    token every ranged read is refused with HTTP 403.
+ *  - `ANDROID_VR` at version **1.60.2** is bot-gated (`LOGIN_REQUIRED`,
+ *    "Sign in to confirm you're not a bot").
+ *  - `ANDROID_VR` at version **1.65.10**, paired with a `visitorData` value,
+ *    returns `OK` with plain, un-ciphered `url` fields for both adaptive audio
+ *    and video, and those URLs serve ranged reads with HTTP 206.
+ *
+ * [visitorData] is minted once from `/visitor_id` (no API key) and sent as
+ * `X-Goog-Visitor-Id`; it is what lifts the bot gate. Because the URLs are not
+ * `signatureCipher`, no JavaScript signature deciphering (n-sig/PO token) is
+ * required on device.
+ *
+ * Requests run without an API key: the keyed clients reject anonymous callers
+ * with `FAILED_PRECONDITION` when the client version is stale, so the version
+ * below must be kept current.
  */
 object InnerTube {
 
@@ -52,13 +59,10 @@ object InnerTube {
 
     /**
      * Must match the client that extracted the stream URLs, for googlevideo
-     * playback. This is the **player** (IOS) user agent; the catalog UA differs.
+     * playback.
      */
     const val USER_AGENT =
-        "com.google.ios.youtube/21.20.2 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X;)"
-
-    private const val CATALOG_USER_AGENT =
-        "com.google.android.apps.youtube.vr.oculus/1.60.2 (Linux; U; Android 12L) gzip"
+        "com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -69,56 +73,97 @@ object InnerTube {
             .build()
     }
 
-    /** Which app Miru pretends to be for a given request. */
-    private enum class Profile(val userAgent: String, val context: JsonObject) {
-        CATALOG(
-            CATALOG_USER_AGENT,
-            buildJsonObject {
-                put("client", buildJsonObject {
-                    put("clientName", "ANDROID_VR")
-                    put("clientVersion", "1.60.2")
-                    put("deviceMake", "Oculus")
-                    put("deviceModel", "Quest 3")
-                    put("androidSdkVersion", 32)
-                    put("osName", "Android")
-                    put("osVersion", "12L")
-                    put("hl", "en")
-                    put("gl", "US")
-                })
-            },
-        ),
-        PLAYER(
-            USER_AGENT,
-            buildJsonObject {
-                put("client", buildJsonObject {
-                    put("clientName", "IOS")
-                    put("clientVersion", "21.20.2")
-                    put("deviceMake", "Apple")
-                    put("deviceModel", "iPhone16,2")
-                    put("osName", "iPhone")
-                    put("osVersion", "18.1.0.22B83")
-                    put("hl", "en")
-                    put("gl", "US")
-                })
-            },
-        ),
+    /**
+     * ANDROID_VR 1.65.10 client context.
+     *
+     * YouTube bot-gates older versions of this client, and the IOS client's
+     * googlevideo URLs now require a PO token Miru has no way to mint. 1.65.10
+     * paired with a `visitorData` value returns plain, un-ciphered `url` fields
+     * that serve ranged reads with HTTP 206.
+     */
+    private val clientContext: JsonObject = buildJsonObject {
+        put("client", buildJsonObject {
+            put("clientName", "ANDROID_VR")
+            put("clientVersion", CLIENT_VERSION)
+            put("deviceMake", "Oculus")
+            put("deviceModel", "Quest 3")
+            put("androidSdkVersion", 32)
+            put("osName", "Android")
+            put("osVersion", "12L")
+            put("hl", "en")
+            put("gl", "US")
+        })
+    }
+
+    /** Client version; must stay in step with the user agent above. */
+    private const val CLIENT_VERSION = "1.65.10"
+
+    /** Numeric id YouTube assigns the ANDROID_VR client. */
+    private const val CLIENT_NAME = "28"
+
+    /**
+     * Visitor id that lifts ANDROID_VR's `LOGIN_REQUIRED` bot gate.
+     *
+     * Minted once from `/visitor_id` and reused; it is cheap to fetch and stable
+     * for a session, so there is no need to persist it.
+     */
+    @Volatile
+    private var visitorData: String? = null
+
+    private val visitorLock = Mutex()
+
+    /**
+     * Return a cached visitor id, minting one on first use.
+     *
+     * `/visitor_id` needs no API key and returns the id in
+     * `responseContext.visitorData`. This deliberately does **not** go through
+     * [post], which itself needs a visitor id to succeed.
+     */
+    private suspend fun visitor(): String? {
+        visitorData?.let { return it }
+        return visitorLock.withLock {
+            visitorData?.let { return@withLock it }
+            val minted = runCatching { mintVisitor() }.getOrNull()
+            if (minted != null) visitorData = minted
+            minted
+        }
+    }
+
+    /** One `/visitor_id` round trip; see [visitor]. */
+    private suspend fun mintVisitor(): String? = withContext(Dispatchers.IO) {
+        val payload = buildJsonObject { put("context", clientContext) }
+        val request = Request.Builder()
+            .url("$BASE/visitor_id")
+            .header("Content-Type", "application/json")
+            .header("User-Agent", USER_AGENT)
+            .header("X-YouTube-Client-Name", CLIENT_NAME)
+            .header("X-YouTube-Client-Version", CLIENT_VERSION)
+            .post(payload.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+        client.newCall(request).execute().use { response ->
+            json.parseToJsonElement(response.body?.string().orEmpty())
+                .jsonObject.obj("responseContext")?.str("visitorData")
+        }
     }
 
     /** POST a JSON body to an InnerTube endpoint and return the parsed object. */
     private suspend fun post(
         endpoint: String,
         body: JsonObject,
-        profile: Profile,
     ): JsonObject = withContext(Dispatchers.IO) {
+        val visitor = visitor()
         val payload = buildJsonObject {
-            put("context", profile.context)
+            put("context", clientContext)
             body.forEach { (key, value) -> put(key, value) }
         }
 
         val request = Request.Builder()
             .url("$BASE/$endpoint")
             .header("Content-Type", "application/json")
-            .header("User-Agent", profile.userAgent)
+            .header("User-Agent", USER_AGENT)
+            .header("X-YouTube-Client-Name", CLIENT_NAME)
+            .header("X-YouTube-Client-Version", CLIENT_VERSION)
+            .apply { visitor?.let { header("X-Goog-Visitor-Id", it) } }
             .post(payload.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
@@ -145,14 +190,12 @@ object InnerTube {
             put("contentCheckOk", true)
             put("racyCheckOk", true)
         },
-        Profile.PLAYER,
     )
 
     /** `/search` — flat list of matching videos. */
     suspend fun search(query: String): JsonObject = post(
         "search",
         buildJsonObject { put("query", query) },
-        Profile.CATALOG,
     )
 
     /** `/browse` — feeds, channel pages, and trending, selected by [browseId]. */
@@ -162,7 +205,6 @@ object InnerTube {
             put("browseId", browseId)
             if (params != null) put("params", params)
         },
-        Profile.CATALOG,
     )
 
     // ---- JsonObject traversal helpers -------------------------------------
