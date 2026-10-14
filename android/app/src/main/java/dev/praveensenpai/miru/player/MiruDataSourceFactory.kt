@@ -70,6 +70,16 @@ private class BoundedDataSource(
     /** URL serving the current window; replaced when a fresh one is minted. */
     private var currentUrl: String? = null
 
+    /**
+     * URI of the load currently being served.
+     *
+     * ExoPlayer re-opens the source with the same [DataSpec] after a failed read,
+     * and each re-open used to hand out a fresh refresh budget, so a throttled
+     * endpoint could be re-minted against without limit. The budget is only
+     * reset when the URI actually changes, i.e. for a genuinely new load.
+     */
+    private var loadUri: String? = null
+
     /** Fresh URLs fetched in a row without managing to read anything. */
     private var refreshStreak = 0
 
@@ -96,8 +106,16 @@ private class BoundedDataSource(
         windowSize = CHUNK_START
         windowRemaining = 0
         windowRead = 0
-        currentUrl = dataSpec.uri.toString()
-        refreshStreak = 0
+        val uri = dataSpec.uri.toString()
+        currentUrl = uri
+        // Only a new load gets a fresh refresh budget; a retry of the same load
+        // keeps its remaining one, so a throttled endpoint cannot be hammered by
+        // the player's re-open loop. A new load arrives as a new DataSource (and
+        // a new DataSpec URI), e.g. when the user hits play again.
+        if (loadUri != uri) {
+            loadUri = uri
+            refreshStreak = 0
+        }
         if (remaining != 0L) openWindow()
         return if (unbounded) C.LENGTH_UNSET.toLong() else dataSpec.length
     }

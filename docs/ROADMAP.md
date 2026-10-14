@@ -32,6 +32,9 @@ deploy, no IP to get blocked, no account.
   at the same offset; playback survives a URL expiring mid-video.
 - **Audio selection** — original-language, DRC-free, AAC/mp4a preferred.
 - **Settings/About screen** — a real `You` tab with a persisted quality ceiling.
+- **Bounded refresh budget** (`v0.3.2`+) — a re-open of the *same* load keeps its
+  remaining re-mint budget instead of resetting it, so a throttled endpoint is
+  not hammered by the player's retry loop.
 
 ## v2 — the differentiators
 

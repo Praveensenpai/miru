@@ -73,6 +73,11 @@ refused past the first window — a fresh URL for the *same* rendition is minted
 and playback continues from the same offset. The stream therefore survives a
 URL expiring mid-video instead of stopping.
 
+Re-minting is budgeted: only a genuinely new load gets a fresh budget, so a
+retry of the *same* load cannot spin against a throttled endpoint. That keeps a
+rate-limited server from being hammered (and the throttle from worsening) while
+normal long-form playback still refreshes as needed.
+
 ## Building
 
 Requires the Android SDK (compileSdk 35) and JDK 17.
