@@ -18,7 +18,7 @@ plays YouTube ad-free and can download for offline.
 | M5 | Downloads (WorkManager + muxing) | done (single-file; muxing is v2) |
 | M6 | Polish pass + emulator verification | done |
 
-## v0.3.0 — serverless (current)
+## v0.3.0–v0.3.5 — serverless (current)
 
 Replaced the Rust backend with on-device InnerTube extraction. No server to
 deploy, no IP to get blocked, no account.
