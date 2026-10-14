@@ -51,6 +51,20 @@ deploy, no IP to get blocked, no account.
 4. **Subscriptions + history** — done. Local Room only (no account).
 5. **Return YouTube Dislike** — done. Queried directly from the community API.
 
+## Known issue — googlevideo deep-range throttling (environmental)
+
+On the current test host, googlevideo serves only the first ~1 MiB window of a
+minted URL: `@0` returns 206 (repeatedly), while any offset past the first
+window returns 403 — even as the **first** request on a freshly-minted URL. This
+was isolated to the network path, not the client:
+
+- `android_vr` and `tv_embedded` URLs both show `0 -> 206`, `1MiB -> 403`.
+- `yt-dlp` fails a full download on the same host with `HTTP Error 403`.
+- A deep offset fails even when it is the only request ever made to that URL.
+
+Re-test full long-form playback from a network whose IP is not throttled; no
+code change is expected to lift this.
+
 ## Deliberately not planned
 
 - A server component. Extraction is on-device by design.
