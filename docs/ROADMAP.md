@@ -73,7 +73,9 @@ segment-based streaming path official clients use; the endpoint answers here
 even though direct-URL audio is capped. It is not a free win, though: the
 reference implementations send a GVS-scope **PO token** in
 `streamerContext.po_token` and report `ATTESTATION_REQUIRED`, so a SABR client
-also needs a token-minting path (BotGuard/WebView). Implementing the UMP
+also needs a token-minting path (BotGuard/WebView). A PO token is unlikely to
+lift the direct-URL cap on its own, though: adaptive video serves deep reads
+without any token, so the cap is not a token gate. Implementing the UMP
 protocol plus token minting is the next milestone. Until then, re-test full
 long-form playback from a network whose IP is not capped.
 
