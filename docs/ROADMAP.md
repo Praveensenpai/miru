@@ -51,19 +51,28 @@ deploy, no IP to get blocked, no account.
 4. **Subscriptions + history** — done. Local Room only (no account).
 5. **Return YouTube Dislike** — done. Queried directly from the community API.
 
-## Known issue — googlevideo deep-range throttling (environmental)
+## Known issue — audio served only as a ~1 MB prefix (environmental)
 
-On the current test host, googlevideo serves only the first ~1 MiB window of a
-minted URL: `@0` returns 206 (repeatedly), while any offset past the first
-window returns 403 — even as the **first** request on a freshly-minted URL. This
-was isolated to the network path, not the client:
+On the current test host, googlevideo serves adaptive **audio** URLs
+(itags 139/140/251) only as a prefix of roughly the first **1 MB**: a ranged
+read whose offset is under ~1 MB returns 206 with real bytes, and any offset at
+or past ~1 MB returns 403. This is deterministic — 12 freshly-minted URLs all
+capped at the same point, swapping to the other `mn` node did not help, and
+`yt-dlp` reproduces it (`HTTP Error 403`). Adaptive **video** URLs (itags
+137/136/135/134) are *not* capped: they serve real bytes at offsets past 16 MB.
+The muxed itag 18 is refused even at offset 0.
 
-- `android_vr` and `tv_embedded` URLs both show `0 -> 206`, `1MiB -> 403`.
-- `yt-dlp` fails a full download on the same host with `HTTP Error 403`.
-- A deep offset fails even when it is the only request ever made to that URL.
+Because the cap is a prefix anchored at byte 0, re-minting a URL for the same
+rendition (Miru's refresh) cannot resume past it — every fresh URL carries the
+same ~1 MB prefix. This is a server-side per-format limit on this egress IP,
+not a client-selection or window-logic bug.
 
-Re-test full long-form playback from a network whose IP is not throttled; no
-code change is expected to lift this.
+The robust fix is **SABR** (`streamingData.serverAbrStreamingUrl`), the
+segment-based streaming path official clients use; the endpoint answers here
+(HTTP 200, `sabr.malformed_config` for an invalid UMP body), so it is reachable
+even though direct-URL audio is capped. Implementing the UMP protocol is the
+next milestone. Until then, re-test full long-form playback from a network whose
+IP is not capped.
 
 ## Deliberately not planned
 
