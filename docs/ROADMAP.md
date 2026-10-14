@@ -75,9 +75,12 @@ reference implementations send a GVS-scope **PO token** in
 `streamerContext.po_token` and report `ATTESTATION_REQUIRED`, so a SABR client
 also needs a token-minting path (BotGuard/WebView). A PO token is unlikely to
 lift the direct-URL cap on its own, though: adaptive video serves deep reads
-without any token, so the cap is not a token gate. Implementing the UMP
-protocol plus token minting is the next milestone. Until then, re-test full
-long-form playback from a network whose IP is not capped.
+without any token, so the cap is not a token gate. SABR is also not usable from
+the current profile at all: the ANDROID_VR player response has no
+`videoPlaybackUstreamerConfig`, which SABR requires. Implementing the UMP
+protocol would therefore require switching clients *and* adding token minting.
+
+Until then, re-test full long-form playback from a network whose IP is not capped.
 
 ## Deliberately not planned
 
