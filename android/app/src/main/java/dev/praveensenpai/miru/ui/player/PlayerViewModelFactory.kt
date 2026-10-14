@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import dev.praveensenpai.miru.data.library.LibraryRepository
+import dev.praveensenpai.miru.data.settings.SettingsRepository
 
 /**
  * Supplies [PlayerViewModel] with the video id and a library repository.
@@ -25,6 +26,7 @@ class PlayerViewModelFactory(
         return PlayerViewModel(
             videoId = videoId,
             library = LibraryRepository(context),
+            settings = SettingsRepository(context.applicationContext),
         ) as T
     }
 }

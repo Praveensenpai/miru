@@ -3,20 +3,22 @@ package dev.praveensenpai.miru.data.download
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import dev.praveensenpai.miru.data.remote.NetworkModule
+import dev.praveensenpai.miru.data.extract.InnerTube
+import dev.praveensenpai.miru.data.extract.YtExtractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 /**
  * Downloads a single video's media to app storage.
  *
- * v1 downloads one file: the best muxed stream when YouTube offers it,
- * otherwise the highest-quality video-only track. Downloading separate video
- * and audio tracks and muxing them together is a v2 task (it needs Media3's
- * Transformer or a MediaMuxer pass). This keeps the first release honest and
- * small rather than half-implementing muxing.
+ * Miru is serverless: the stream URL is extracted on-device via [YtExtractor]
+ * and fetched directly with the same VR User-Agent that obtained it, so
+ * googlevideo serves the bytes without any proxy. Only muxed (video+audio)
+ * streams are supported for now; separate-track muxing is a later task.
  *
  * Progress is written to the Room row as it streams, so the Downloads tab can
  * observe it live.
@@ -29,23 +31,22 @@ class DownloadWorker(
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val id = inputData.getString(KEY_ID) ?: return@withContext Result.failure()
         val dao = MiruDatabase.get(applicationContext).downloads()
-        val client = NetworkModule.downloadClient
 
         dao.updateProgress(id, -1, DownloadState.RUNNING)
 
         try {
-            val streams = NetworkModule.api.streams(id)
-            // Prefer a muxed stream (has both audio and video in one file).
-            val chosen = streams.combined.maxByOrNull { it.height ?: 0 }
+            val streams = YtExtractor.streams(id)
+            val stream = streams.combined.maxByOrNull { it.height ?: 0 }
                 ?: streams.video.maxByOrNull { it.height ?: 0 }
-                ?: return@withContext Result.failure()
-
-            val ext = chosen.ext ?: "mp4"
-            val target = File(downloadDir(applicationContext), "$id.$ext")
+            if (stream == null) {
+                dao.updateProgress(id, 0, DownloadState.FAILED)
+                return@withContext Result.failure()
+            }
+            val target = File(downloadDir(applicationContext), "$id.${stream.ext ?: "mp4"}")
 
             val request = Request.Builder()
-                .url(chosen.url)
-                .header("User-Agent", "miru/0.0.1")
+                .url(stream.url)
+                .header("User-Agent", InnerTube.USER_AGENT)
                 .build()
 
             client.newCall(request).execute().use { response ->
@@ -85,6 +86,17 @@ class DownloadWorker(
 
     companion object {
         const val KEY_ID = "video_id"
+
+        /**
+         * Dedicated client for media downloads: no overall read timeout, because
+         * a long video streams for minutes, but a firm connect timeout.
+         */
+        private val client: OkHttpClient by lazy {
+            OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(0, TimeUnit.SECONDS)
+                .build()
+        }
 
         /** App-private directory for downloaded media; created on first use. */
         fun downloadDir(context: Context): File =

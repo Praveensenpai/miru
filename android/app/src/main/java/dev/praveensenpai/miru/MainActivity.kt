@@ -6,8 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -23,7 +21,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import dev.praveensenpai.miru.ui.components.PlaceholderScreen
 import dev.praveensenpai.miru.ui.channel.ChannelScreen
 import dev.praveensenpai.miru.ui.downloads.DownloadsScreen
 import dev.praveensenpai.miru.ui.home.HomeScreen
@@ -32,6 +29,7 @@ import dev.praveensenpai.miru.ui.nav.Routes
 import dev.praveensenpai.miru.ui.nav.TopDestination
 import dev.praveensenpai.miru.ui.player.PlayerScreen
 import dev.praveensenpai.miru.ui.search.SearchScreen
+import dev.praveensenpai.miru.ui.settings.SettingsScreen
 import dev.praveensenpai.miru.ui.subscriptions.SubscriptionsScreen
 import dev.praveensenpai.miru.ui.theme.MiruTheme
 
@@ -129,11 +127,7 @@ private fun MiruRoot() {
             }
 
             composable(TopDestination.You.route) {
-                PlaceholderScreen(
-                    icon = Icons.Filled.Person,
-                    title = "You",
-                    message = "Account, auth status, and settings live here in v2.",
-                )
+                SettingsScreen()
             }
 
             composable("search") {

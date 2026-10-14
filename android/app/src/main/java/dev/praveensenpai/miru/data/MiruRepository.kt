@@ -1,42 +1,47 @@
 package dev.praveensenpai.miru.data
 
+import dev.praveensenpai.miru.data.extract.DislikeClient
+import dev.praveensenpai.miru.data.extract.SponsorBlockClient
+import dev.praveensenpai.miru.data.extract.YtExtractor
 import dev.praveensenpai.miru.data.model.ChannelResponse
 import dev.praveensenpai.miru.data.model.DislikeResponse
 import dev.praveensenpai.miru.data.model.SponsorSegment
 import dev.praveensenpai.miru.data.model.StreamsResponse
 import dev.praveensenpai.miru.data.model.VideoCard
 import dev.praveensenpai.miru.data.model.VideoDetail
-import dev.praveensenpai.miru.data.remote.MiruApi
-import dev.praveensenpai.miru.data.remote.NetworkModule
 
 /**
- * Single access point to the backend.
+ * Single access point to YouTube data.
  *
- * Deliberately thin for v1: it wraps the API and normalises failures into
- * [Result] so ViewModels never touch Retrofit types. Local caching (Room) will
- * be layered underneath this without changing call sites.
+ * Miru is serverless: there is no backend to configure or reach. Everything is
+ * pulled straight from YouTube via [YtExtractor] on the device, and the
+ * community APIs (SponsorBlock, Return YouTube Dislike) are called directly.
+ *
+ * This class stays deliberately thin and normalises every failure into a
+ * [Result], so ViewModels never deal with IO exceptions and a missing
+ * SponsorBlock/Dislike response degrades to an empty value rather than an error.
  */
-class MiruRepository(private val api: MiruApi = NetworkModule.api) {
+class MiruRepository {
 
     suspend fun trending(): Result<List<VideoCard>> = runCatching {
-        api.trending().items
+        YtExtractor.trending()
     }
 
     suspend fun search(query: String, page: Int = 1): Result<List<VideoCard>> = runCatching {
-        api.search(query, page).items
+        YtExtractor.search(query)
     }
 
     suspend fun video(id: String): Result<VideoDetail> = runCatching {
-        api.video(id)
+        YtExtractor.video(id)
     }
 
     suspend fun streams(id: String): Result<StreamsResponse> = runCatching {
-        api.streams(id)
+        YtExtractor.streams(id)
     }
 
     /** A channel's profile and recent videos. */
     suspend fun channel(id: String): Result<ChannelResponse> = runCatching {
-        api.channel(id)
+        YtExtractor.channel(id)
     }
 
     /**
@@ -45,7 +50,7 @@ class MiruRepository(private val api: MiruApi = NetworkModule.api) {
      * Failure is non-fatal: the player simply skips nothing.
      */
     suspend fun sponsorblock(id: String): Result<List<SponsorSegment>> = runCatching {
-        api.sponsorblock(id).segments
+        SponsorBlockClient.segments(id)
     }
 
     /**
@@ -54,6 +59,6 @@ class MiruRepository(private val api: MiruApi = NetworkModule.api) {
      * Failure is non-fatal: the player just hides the dislike row.
      */
     suspend fun dislike(id: String): Result<DislikeResponse> = runCatching {
-        api.dislike(id)
+        DislikeClient.votes(id)
     }
 }
