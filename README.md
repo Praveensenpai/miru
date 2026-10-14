@@ -25,6 +25,13 @@ blocked, and no subscription data leaving your device.
 - **Downloads, subscriptions, and watch history** stored locally (Room).
 - **No login.** There is no account system to hold your data.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/home.png" width="270" alt="Home feed">
+  <img src="docs/screenshots/settings.png" width="270" alt="Settings & About">
+</p>
+
 ## Feature status
 
 | Feature | Status |
