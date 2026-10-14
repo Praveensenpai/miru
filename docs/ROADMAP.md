@@ -70,9 +70,12 @@ not a client-selection or window-logic bug.
 The robust fix is **SABR** (`streamingData.serverAbrStreamingUrl`), the
 segment-based streaming path official clients use; the endpoint answers here
 (HTTP 200, `sabr.malformed_config` for an invalid UMP body), so it is reachable
-even though direct-URL audio is capped. Implementing the UMP protocol is the
-next milestone. Until then, re-test full long-form playback from a network whose
-IP is not capped.
+even though direct-URL audio is capped. It is not a free win, though: the
+reference implementations send a GVS-scope **PO token** in
+`streamerContext.po_token` and report `ATTESTATION_REQUIRED`, so a SABR client
+also needs a token-minting path (BotGuard/WebView). Implementing the UMP
+protocol plus token minting is the next milestone. Until then, re-test full
+long-form playback from a network whose IP is not capped.
 
 ## Deliberately not planned
 
