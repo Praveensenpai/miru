@@ -252,7 +252,7 @@ private fun VideoSurface(
                 // Without this the screen would sit on a silent black frame with
                 // no explanation whenever the stream fails to load (a refused
                 // CDN request, an expired URL that cannot be re-minted, etc.).
-                playbackError = error.errorCodeName
+                playbackError = describePlaybackError(error)
                 isPlaying = false
             }
 
@@ -469,6 +469,31 @@ private fun VideoSurface(
             }
         }
     }
+}
+
+/**
+ * Turn a Media3 playback error into a short, actionable message.
+ *
+ * The raw `errorCodeName` (e.g. `ERROR_CODE_IO_BAD_HTTP_STATUS`) tells a user
+ * nothing. These streams fail most often because the CDN refused the request —
+ * a network/regional restriction rather than a bad video — so say that, while
+ * keeping the raw code in parentheses for anyone debugging.
+ */
+private fun describePlaybackError(error: PlaybackException): String {
+    val hint = when (error.errorCode) {
+        PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
+        PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE ->
+            "The video server refused the request. This is usually a network or " +
+                "regional restriction, not a problem with the video. Try again on " +
+                "a different connection."
+        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
+            "Couldn't reach the video server. Check your connection and try again."
+        PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
+            "This stream is no longer available."
+        else -> null
+    }
+    return if (hint == null) error.errorCodeName else "$hint\n(${error.errorCodeName})"
 }
 
 /** 1234567 -> "1.2M". Compact vote counts for the metadata row. */
