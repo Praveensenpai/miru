@@ -98,6 +98,7 @@ fun PlayerScreen(
             bundleOf(
                 PlayerCommands.KEY_PLAY_URL to ready.playUrl,
                 PlayerCommands.KEY_AUDIO_URL to ready.audioUrl,
+                PlayerCommands.KEY_VIDEO_ID to ready.detail.id,
                 PlayerCommands.KEY_TITLE to ready.detail.title,
                 PlayerCommands.KEY_ARTIST to ready.detail.channel.name,
                 PlayerCommands.KEY_ARTWORK to ready.detail.thumbnail,

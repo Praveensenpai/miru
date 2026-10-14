@@ -31,10 +31,6 @@ class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private var player: ExoPlayer? = null
 
-    private val sourceFactory by lazy {
-        ProgressiveMediaSource.Factory(MiruDataSourceFactory())
-    }
-
     override fun onCreate() {
         super.onCreate()
         val exoPlayer = ExoPlayer.Builder(this)
@@ -95,6 +91,11 @@ class PlaybackService : MediaSessionService() {
     private fun applyMedia(args: Bundle) {
         val playUrl = args.getString(PlayerCommands.KEY_PLAY_URL) ?: return
         val audioUrl = args.getString(PlayerCommands.KEY_AUDIO_URL)
+        val videoId = args.getString(PlayerCommands.KEY_VIDEO_ID)
+
+        // Built per video so the data source can re-mint stream URLs that stop
+        // serving mid-playback.
+        val sourceFactory = ProgressiveMediaSource.Factory(MiruDataSourceFactory(videoId))
 
         val metadata = MediaMetadata.Builder()
             .setTitle(args.getString(PlayerCommands.KEY_TITLE))

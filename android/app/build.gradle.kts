@@ -14,13 +14,26 @@ android {
         applicationId = "dev.praveensenpai.miru"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.3.1"
+        versionCode = 5
+        versionName = "0.3.2"
+    }
+
+    signingConfigs {
+        // Committed so every release shares one stable signature and can be
+        // installed as an upgrade. This is an open-source, GitHub-only project;
+        // the key is intentionally public and not meant to protect secrets.
+        create("release") {
+            storeFile = rootProject.file("miru-release.jks")
+            storePassword = "miru-miru"
+            keyAlias = "miru"
+            keyPassword = "miru-miru"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

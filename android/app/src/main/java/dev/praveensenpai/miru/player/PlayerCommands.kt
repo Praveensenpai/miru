@@ -19,6 +19,8 @@ object PlayerCommands {
 
     const val KEY_PLAY_URL = "playUrl"
     const val KEY_AUDIO_URL = "audioUrl"
+    /** Identifies the video so the data source can re-mint expired stream URLs. */
+    const val KEY_VIDEO_ID = "videoId"
     const val KEY_TITLE = "title"
     const val KEY_ARTIST = "artist"
     const val KEY_ARTWORK = "artwork"

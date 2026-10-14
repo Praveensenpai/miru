@@ -25,14 +25,16 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APK
+      # Signed with the committed keystore so every release shares one
+      # signature and installs as an upgrade over the previous one.
+      - name: Build signed release APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk miru-${{ github.ref_name }}-debug.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk miru-${{ github.ref_name }}.apk
 
       - name: Upload APK to release
         uses: softprops/action-gh-release@v2
         with:
-          files: miru-${{ github.ref_name }}-debug.apk
+          files: miru-${{ github.ref_name }}.apk

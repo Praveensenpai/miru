@@ -25,9 +25,11 @@ deploy, no IP to get blocked, no account.
 
 - **Dual InnerTube profiles** — `ANDROID_VR` for catalog, `IOS` for the player
   (plain un-ciphered URLs up to 2160p, no JS runtime needed).
-- **Bounded-range streaming** — a custom `DataSource` requests 1 MiB windows and
-  stitches them into one stream, retrying 403s with backoff. googlevideo
-  throttles oversized/open-ended ranges, so this is what makes playback stable.
+- **Bounded-range streaming** — a custom `DataSource` requests bounded windows and
+  stitches them into one stream. googlevideo rejects oversized/open-ended ranges
+  and its `rqh=1` URLs stop serving a rendition after a while, so a refused read
+  past the first window re-mints a fresh URL for the *same* rendition and resumes
+  at the same offset; playback survives a URL expiring mid-video.
 - **Audio selection** — original-language, DRC-free, AAC/mp4a preferred.
 - **Settings/About screen** — a real `You` tab with a persisted quality ceiling.
 

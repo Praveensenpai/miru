@@ -65,10 +65,13 @@ catalog (search, browse, channel) and an **iOS** client for the player, which
 returns plain, un-ciphered stream URLs up to 2160p and avoids needing a
 JavaScript runtime for signature deciphering.
 
-Media is streamed through a custom `DataSource` that requests small bounded
-byte ranges and stitches them into one continuous stream. googlevideo throttles
-and 403s oversized or open-ended range requests, so bounded windows keep
-playback reliable; transient 403s are retried with exponential backoff.
+Media is streamed through a custom `DataSource` that requests bounded byte
+ranges and stitches them into one continuous stream. googlevideo rejects
+oversized or open-ended range requests, and its `rqh=1` URLs stop serving a
+rendition after a while, so each window is kept modest and — when a read is
+refused past the first window — a fresh URL for the *same* rendition is minted
+and playback continues from the same offset. The stream therefore survives a
+URL expiring mid-video instead of stopping.
 
 ## Building
 

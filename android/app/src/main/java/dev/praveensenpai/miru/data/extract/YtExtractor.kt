@@ -8,6 +8,7 @@ import dev.praveensenpai.miru.data.model.VideoCard
 import dev.praveensenpai.miru.data.model.VideoDetail
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.coroutines.runBlocking
 import java.io.IOException
 
 /**
@@ -136,6 +137,37 @@ object YtExtractor {
             audio = preferred,
             combined = combined,
         )
+    }
+
+    /**
+     * Mint a fresh playable URL for one [itag] of [videoId].
+     *
+     * googlevideo's `rqh=1` URLs are short-lived: they stop serving a rendition
+     * after a while and answer further ranged reads with HTTP 403. Playback is
+     * kept alive by asking YouTube for the rendition again and continuing at the
+     * byte offset already reached. Blocking, so it can be called from the
+     * player's loader thread; returns null when the video no longer offers that
+     * rendition.
+     *
+     * [xtags] identifies the exact rendition within an itag, which matters for
+     * audio: YouTube lists the original and every dubbed track under the same
+     * itag, so matching on itag alone can silently swap in another language.
+     */
+    fun freshStreamUrl(videoId: String, itag: String, xtags: String?): String? = runBlocking {
+        val xtagsRe = Regex("[?&]xtags=([^&]*)")
+        fun xtagsOf(url: String?): String? =
+            url?.let { xtagsRe.find(it)?.groupValues?.getOrNull(1) }
+        runCatching {
+            val response = InnerTube.player(videoId)
+            val streaming = response.obj("streamingData") ?: return@runCatching null
+            val raw = mutableListOf<JsonObject>()
+            streaming.array("formats")?.forEach { (it as? JsonObject)?.let(raw::add) }
+            streaming.array("adaptiveFormats")?.forEach { (it as? JsonObject)?.let(raw::add) }
+            raw.firstOrNull { format ->
+                val id = format.long("itag")?.toString() ?: format.str("formatId")
+                id == itag && xtagsOf(format.str("url")) == xtags
+            }?.str("url")
+        }.getOrNull()
     }
 
     suspend fun channel(id: String): ChannelResponse {
